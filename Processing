@@ -1,0 +1,113 @@
+import controlP5.*;
+import processing.net.*;
+ControlP5 cp5; //create a controlP5 object
+
+Server myServer; //create a server object
+int c, c1;
+String C;
+float n, n1;
+int myColor = color(255); //establish a color that will later on be called
+
+void setup() {
+  myServer = new Server(this, 5200); //establish a server, with a 5200 baud rate
+  cp5 = new ControlP5(this);
+  size(400, 600); //declaring size on main window
+
+  fill(153); //setting window color to black
+  rect(500, 0, 100, 400); //creating a rectangle shape within the window, first two parameter are the location of the upper-left corner, the third sets the width and the fourth the height.
+
+  cp5.addButton("START") //create a start button with the following characteristics.
+    .setValue(0)
+    .setPosition(100, 100)
+    .setSize(200, 30);
+
+  cp5.addButton("STOP") //create a stop button with the following characteristics.
+    .setValue(0)
+    .setPosition(100, 140)
+    .setSize(200, 30);
+
+  cp5.addButton("SILVER")//create a silver button with the following characteristics. 
+    .setValue(0)
+    .setPosition(100, 320)
+    .setSize(200, 30);
+}
+//the following variables are created to deal with the messages recieved from the arduino (client).
+char[] msg;
+float bugV, objV;
+
+//Function that separates an array of characters (string) into each individual string (numerical value).
+void separateCharArray(char[] msg, char separator) {
+  int separatorIndex = -1;
+  for (int i = 0; i < msg.length; i++) {
+    if (msg[i] == separator) {
+      separatorIndex = i;
+      break;
+    }
+  }
+  String objS = new String(msg, 0, separatorIndex);
+  String bugS = new String(msg, separatorIndex + 1, msg.length - separatorIndex - 1);
+
+//once values are converted, they are stored in the following variables.
+  bugV = Float.parseFloat(objS);
+  objV = Float.parseFloat(bugS);
+}
+
+//window is drawn in the following loop. All characteristics mentioned previously will be implented within this loop
+void draw() {
+  background(myColor);
+  myColor = lerpColor(c, c1, n); //setting the predetermiined myColor variable to change colours at a determined increment
+  n += (1-n)* 0.1;
+  Client thisClient = myServer.available(); //checking if client is available & connected to server 
+  
+  if (thisClient !=null) //if the client is connected, take in the message that is being sent from the client
+  {
+    String answer = thisClient.readString();
+    if (answer != null) //if said message is a value other than Null, the following occurs.
+    {
+      println(answer); //the msg is printed
+      msg = answer.toCharArray(); // the msg is passed through the functioned established above
+      separateCharArray(msg, 'S'); // the parameters taken in are the msg and the character S, this will allow the fucntion to know when a string ends and another begins
+    }
+  }
+  fill(0); 
+  rect(0, 450, 400, 150); //create another rectangle within the window. Same as explained above
+  textSize(20); //set the text size to 20
+  fill(255);
+  text("Velocity", 50, 500);
+  text(bugV, 50, 550); //prints out the buggies velocity on the screen
+  text("CM/S", 120, 550);
+  fill(0, 255, 255);
+  text("Obj Velocity", 200, 500);
+  text(objV, 250, 550); //prints out the object the buggy is following velocity
+  text("CM/S", 320, 550);
+}
+void controlEvent(CallbackEvent event)// function for buttons, dpeending on the button pressed, a different value will be sent to the arduino
+{
+  if (event.getAction()==ControlP5.ACTION_CLICK) {
+    if (myServer.active()) {
+      switch(event.getController().getAddress()) {
+      case "/START":
+        c = c1;
+        c1 = color(0, 255, 21);
+        myServer.write('G');
+        delay (1000);
+        println("Start Button Pressed!");
+        break;
+      case "/STOP":
+        c = c1;
+        c1 = color(255, 45, 0);
+        myServer.write('S');
+        delay (1000);
+        println("Stop Button Pressed!");
+        break;
+      case "/SILVER":
+        c = c1;
+        c1 = color(255);
+        myServer.write('A');
+        delay (1000);
+        println("Silver challenge begun!");
+        break;
+      }
+    }
+  }
+}
